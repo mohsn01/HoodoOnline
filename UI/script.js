@@ -5,17 +5,28 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchProducts();
   });
   
+  // function fetchProducts() {
+  //   fetch('/api/products')
+  //     .then(response => response.json())
+  //     .then(products => {
+  //       displayProducts(products);
+  //     })
+  //     .catch(error => {
+  //       console.error('Error:', error);
+  //     });
+  // }
   function fetchProducts() {
     fetch('/api/products')
-      .then(response => response.json())
-      .then(products => {
+    .then(response => response.json())
+    .then(products => {
         displayProducts(products);
-      })
-      .catch(error => {
+        fetchCartItems(); // Fetch and update the cart items
+    })
+    .catch(error => {
         console.error('Error:', error);
-      });
-  }
-  
+    });
+}
+
   
   function displayProducts(products) {
     const productList = document.getElementById('product-list');
@@ -72,7 +83,83 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Error:', error);
       });
   }
-  
+  let cart = {};
+
+  function addToCart(productId) {
+    fetch(`/api/cart/${productId}`, {
+        method: 'POST'
+    })
+        .then(response => response.json())
+        .then(cartItem => {
+            console.log('Product added to cart:', cartItem);
+            fetchCartItems(); // Fetch and display the updated cart items
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
+
+
+function updateCartItemQuantity(productId, quantity) {
+    fetch(`/api/cart/${productId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ quantity })
+    })
+    .then(response => response.json())
+    .then(updatedCartItem => {
+        console.log('Cart item quantity updated:', updatedCartItem);
+        fetchCartItems();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function fetchCartItems() {
+    fetch('/api/cart')
+    .then(response => response.json())
+    .then(cartItems => {
+        cart = {}; // Clear the cart object
+        cartItems.forEach(cartItem => {
+            cart[cartItem.productId] = cartItem.quantity;
+        });
+
+        displayCartItems(cartItems);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function calculateItemPrice(product) {
+    const quantity = cart[product.id] || 0;
+    return quantity * product.price;
+}
+
+function displayCartItems(cartItems) {
+  const cartList = document.getElementById('cart-list');
+  cartList.innerHTML = '';
+
+  let totalPrice = 0; // Initialize total price variable
+
+  cartItems.forEach(cartItem => {
+      const listItem = document.createElement('li');
+      listItem.textContent = `${cartItem.name} - Quantity: ${cartItem.quantity} - Total Price: $${calculateItemPrice(cartItem.product).toFixed(2)}`;
+      cartList.appendChild(listItem);
+
+      // Calculate and add the item price to the total price
+      totalPrice += calculateItemPrice(cartItem.product);
+  });
+
+  // Update the total price in the cart
+  const totalPriceElement = document.getElementById('total-price');
+  totalPriceElement.textContent = `$${totalPrice.toFixed(2)}`;
+}
+
+
   function fetchCartItems() {
     fetch('/api/cart')
       .then(response => response.json())
